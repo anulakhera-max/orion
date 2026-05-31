@@ -167,6 +167,52 @@
   .resolve-row button { height: 32px; padding: 0 12px; font-size: 12px; }
   .resolve-row .lbl-sm { font-size: 11px; color: var(--text-faint); }
   .resolved-line { font-size: 12px; color: var(--text-soft); margin-top: 8px; }
+  /* WHAT IT SAW (snapshot on a logged call) */
+  details.saw { margin-top: 8px; }
+  details.saw summary { cursor: pointer; font-size: 11px; color: var(--info); }
+  .saw-body { padding: 8px 0 2px; }
+  .saw-row { font-size: 12px; line-height: 1.5; margin-bottom: 4px; }
+  .saw-row a { color: var(--text); text-decoration: none; }
+  .saw-row a:hover { text-decoration: underline; }
+
+  /* SCAN HISTORY */
+  .hist-head { font-family: var(--serif); font-size: 17px; font-weight: 500; margin: 0 0 4px; }
+  .hist-head .count { font-family: var(--mono); font-size: 11px; color: var(--text-faint); font-weight: normal; }
+  .hist-note { font-size: 12px; color: var(--text-soft); font-style: italic; margin-bottom: 12px; }
+  details.scan-rec { background: var(--bg-card); border: 1px solid var(--border-soft); border-radius: 9px; padding: 4px 13px; margin-bottom: 7px; }
+  details.scan-rec.kept { border-left: 3px solid var(--edge); }
+  details.scan-rec summary { cursor: pointer; font-size: 12.5px; color: var(--text-soft); padding: 8px 0; }
+  .scan-when { font-family: var(--mono); color: var(--text); }
+  .scan-keep { font-size: 9px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; color: var(--edge); background: var(--edge-bg); padding: 1px 5px; border-radius: 4px; }
+  .scan-body { padding: 4px 0 8px; }
+  .scan-call { font-size: 12.5px; padding: 3px 0; display: flex; gap: 8px; align-items: baseline; }
+  .scan-tier { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; padding: 1px 5px; border-radius: 4px; }
+  .scan-tier.edge { background: var(--edge-bg); color: var(--edge); }
+  .scan-tier.watch { background: var(--meh-bg); color: var(--meh); }
+  .scan-tier.pass { background: var(--bg-soft); color: var(--text-faint); }
+  .scan-line { color: var(--text-soft); flex: 1; }
+  /* REGIME BANNER + OPENING CONDITIONS */
+  #regime-banner { background: var(--bg-info); border-radius: 10px; padding: 10px 14px; margin-bottom: 16px; font-size: 13px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .reg-lbl { font-size: 10px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; color: var(--text-faint); }
+  .reg-lean { font-family: var(--mono); font-size: 11px; font-weight: 700; text-transform: uppercase; padding: 2px 7px; border-radius: 5px; }
+  .reg-lean.greed { background: var(--good-bg); color: var(--good); }
+  .reg-lean.fear { background: var(--bad-bg); color: var(--bad); }
+  .reg-lean.mixed, .reg-lean.neutral { background: var(--bg-soft); color: var(--text-soft); }
+  .reg-text { color: var(--text-soft); flex: 1; }
+  .cond { background: var(--bg-soft); border-radius: 8px; padding: 7px 11px; margin: 9px 0; font-size: 12.5px; display: flex; gap: 7px; align-items: center; flex-wrap: wrap; }
+  .cond .reg-text { color: var(--text-soft); }
+
+  /* WHAT CHANGED — timeline */
+  .tl { margin: 10px 0; padding-top: 9px; border-top: 1px dashed var(--border-soft); }
+  .tl-head { font-size: 10px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; color: var(--text-faint); margin-bottom: 6px; }
+  .tl-row { font-size: 12.5px; line-height: 1.5; padding: 3px 0 3px 12px; border-left: 2px solid var(--border-soft); margin-bottom: 3px; color: var(--text); }
+  .tl-when { font-family: var(--mono); font-size: 11px; color: var(--text-faint); }
+  .tl-empty { font-size: 12px; color: var(--text-faint); font-style: italic; margin-bottom: 6px; }
+  .tl-add { display: flex; gap: 7px; margin-top: 7px; }
+  .tl-add input { flex: 1; font-size: 12px; padding: 7px 10px; border: 1px solid var(--border); border-radius: 7px; background: var(--bg-card); color: var(--text); }
+  .tl-add button { height: 32px; padding: 0 12px; font-size: 12px; }
+  .verdict { font-size: 13px; color: var(--text); margin-top: 8px; padding: 8px 11px; background: var(--bg-soft); border-radius: 8px; }
+  .verdict .reg-lbl { margin-right: 6px; }
 </style>
 </head>
 <body>
@@ -196,6 +242,8 @@
   <div class="status" id="status">Ready. Click <b>Run scan</b> to gather the live Quantum narrative.</div>
   <pre id="scan-log" style="display:none; background:var(--bg-soft); border:1px solid var(--border-soft); border-radius:8px; padding:10px 13px; font-family:var(--mono); font-size:11.5px; line-height:1.6; color:var(--text-soft); margin:0 0 16px; max-height:220px; overflow:auto; white-space:pre-wrap;"></pre>
 
+  <div id="regime-banner" style="display:none;"></div>
+
   <!-- TIER 1 — EDGE CALLS -->
   <div class="tier edge">
     <div class="tier-head">Edge Calls <span class="count" id="edge-count"></span></div>
@@ -224,6 +272,7 @@
       <span>Logged calls — frozen when made, resolved honestly later. The foundation of the learning loop.</span>
     </div>
     <div id="log-list"></div>
+    <div id="hist-list" style="margin-top:26px;"></div>
   </div>
 
   <details class="settings">
@@ -251,6 +300,7 @@
   "use strict";
   const $ = id => document.getElementById(id);
   let lastResults = [];   // gathered narrative from the most recent scan, for the engine
+  let lastScanId = null;  // ties a gather record to its later analysis
 
   // ===== TIME ANCHOR (Charter principle #1) =====
   function nowEST() {
@@ -425,6 +475,7 @@
     $('status').className = 'status';
     $('status').innerHTML = '<span class="spinner"></span>Scan started…';
     $('watch-list').innerHTML = '';
+    $('regime-banner').style.display = 'none';
     logLine('— ORION Quantum scan · ' + stamp + ' EST —');
     logLine('proxies (in order): ' + PROXIES.map(p => p.name).join(' → '));
 
@@ -451,6 +502,7 @@
 
       results.sort((a, b) => attentionScore(b) - attentionScore(a));
       lastResults = results;
+      recordGather(results);
       $('watch-list').innerHTML = results.map(renderWatchCard).join('') || '<div class="empty">No data this scan — see the log above.</div>';
       $('watch-count').textContent = results.length + ' names';
 
@@ -524,7 +576,9 @@
       "- 'pass': priced-in / consensus / no readable edge — give the one-line reason.",
       "",
       "Return ONLY valid JSON — no markdown, no code fences, no preamble — exactly this shape:",
-      '{"calls":[{"ticker":"","tier":"edge|watch|pass","direction":"bullish|bearish|neutral","confidence":"low|medium|high","edge_type":"early|contrarian|none","story":"one line: the dominant narrative now","arc":"forming|building|crowded|priced-in","call":"the reasoning — for edge: direction + why early/contrarian; for watch: what is forming + what would sharpen it; for pass: why there is no edge","probe":"the single specific thing to check that confirms or kills this (an analyst note, a data point, or which Unusual Whales screen + ticker + field). null if pass.","honest_line":"what you read and what you did NOT have; this is analysis and a hypothesis, NOT financial advice."}]}',
+      '{"regime":{"lean":"greed|fear|mixed|neutral","macro":"one line: the dominant macro/political/policy story driving these sectors right now (funding, approvals, partnerships, negative news, natural/geopolitical events)","posture":"one line: what the tape is doing — sector ripping, rolling over, rotating, quiet"},"calls":[{"ticker":"","tier":"edge|watch|pass","direction":"bullish|bearish|neutral","confidence":"low|medium|high","edge_type":"early|contrarian|none","story":"one line: the dominant narrative now","arc":"forming|building|crowded|priced-in","call":"the reasoning — for edge: direction + why early/contrarian; for watch: what is forming + what would sharpen it; for pass: why there is no edge","probe":"the single specific thing to check that confirms or kills this (an analyst note, a data point, or which Unusual Whales screen + ticker + field). null if pass.","honest_line":"what you read and what you did NOT have; this is analysis and a hypothesis, NOT financial advice."}]}',
+      "",
+      "The 'regime' is your read of the OPENING CONDITIONS — the environment these calls are being made into. It is frozen with each call so a future outcome can be judged against the world at call time. It is a [SYNTH] read from the headlines you have, not hard market data.",
       "",
       "TRENDING QUANTUM NAMES:",
       names
@@ -556,11 +610,11 @@
     return { ok: true, text };
   }
 
-  function parseCalls(text) {
+  function parseResponse(text) {
     let t = text.trim().replace(/^```json\s*/i, '').replace(/^```\s*/, '').replace(/```\s*$/, '').trim();
     const obj = JSON.parse(t);
     if (!obj.calls || !Array.isArray(obj.calls)) throw new Error('no calls array in response');
-    return obj.calls;
+    return { regime: obj.regime || null, calls: obj.calls };
   }
 
   function dataFor(ticker) { return lastResults.find(r => r.t === ticker) || {}; }
@@ -637,8 +691,8 @@
         return;
       }
 
-      let calls;
-      try { calls = parseCalls(res.text); }
+      let parsed;
+      try { parsed = parseResponse(res.text); }
       catch (e) {
         $('status').className = 'status err';
         $('status').innerHTML = 'ORION replied but the format was off — couldn\'t parse the calls. See log.';
@@ -646,10 +700,19 @@
         logLine('raw reply: ' + res.text.substring(0, 400), 'err');
         return;
       }
+      const calls = parsed.calls;
+      const regime = parsed.regime;
 
       const edges = calls.filter(c => c.tier === 'edge');
       const watch = calls.filter(c => c.tier === 'watch');
       const pass = calls.filter(c => c.tier === 'pass');
+
+      if (regime) {
+        $('regime-banner').style.display = 'block';
+        $('regime-banner').innerHTML = '<span class="reg-lbl">Opening conditions</span> <span class="tag synth">synth</span>' +
+          '<span class="reg-lean ' + esc((regime.lean || '').toLowerCase()) + '">' + esc(regime.lean || '') + '</span>' +
+          '<span class="reg-text">' + esc(regime.macro || '') + ' &middot; ' + esc(regime.posture || '') + '</span>';
+      } else { $('regime-banner').style.display = 'none'; }
 
       $('edge-list').innerHTML = edges.length
         ? edges.map(renderEdgeCard).join('')
@@ -668,13 +731,14 @@
       $('pass-count').textContent = pass.length;
 
       logLine('✓ calls: ' + edges.length + ' edge · ' + watch.length + ' watch · ' + pass.length + ' pass', 'ok');
-      const logged = logEdgeCalls(edges, 'quantum');
+      const loggedIds = logEdgeCalls(edges, 'quantum', lastScanId, regime);
+      recordAnalysis(calls, { edge: edges.length, watch: watch.length, pass: pass.length }, loggedIds, regime);
       $('vt-log-count').textContent = getLog().length ? '(' + getLog().length + ')' : '';
-      if (logged) logLine('✓ logged ' + logged + ' edge call' + (logged === 1 ? '' : 's') + ' to the call log (frozen)', 'ok');
+      if (loggedIds.length) logLine('✓ logged ' + loggedIds.length + ' edge call' + (loggedIds.length === 1 ? '' : 's') + ' with snapshot (frozen)', 'ok');
       $('status').innerHTML = 'ORION\'s read · ' + nowEST() + ' EST · ' +
         edges.length + ' edge call' + (edges.length === 1 ? '' : 's') + ', ' +
         watch.length + ' watching, ' + pass.length + ' passed' +
-        (logged ? ' · ' + logged + ' logged' : (edges.length ? ' · already logged today' : '')) +
+        (loggedIds.length ? ' · ' + loggedIds.length + ' logged' : (edges.length ? ' · already logged today' : '')) +
         '. Every call is [SYNTH] — analysis, not advice.';
     } catch (e) {
       $('status').className = 'status err';
@@ -696,17 +760,27 @@
   }
 
   // Edge calls are logged automatically the moment they're made — no cherry-picking what gets recorded.
-  function logEdgeCalls(edges, universe) {
-    if (!edges.length) return 0;
+  // Each carries a frozen snapshot of what ORION saw, so a future outcome can be traced to its cause.
+  function snapshotFor(ticker) {
+    const d = dataFor(ticker);
+    return {
+      price: d.price != null ? d.price : null,
+      chg: d.chg != null ? d.chg : null,
+      news: (d.news || []).slice(0, 8).map(n => ({ title: n.title, pub: n.pub, time: n.time, link: n.link }))
+    };
+  }
+  function logEdgeCalls(edges, universe, scanId, regime) {
+    const ids = [];
+    if (!edges.length) return ids;
     const log = getLog();
     const day = todayEST();
-    let added = 0;
     edges.forEach(c => {
       const dup = log.some(e => e.ticker === c.ticker && e.day === day && e.status === 'pending');
       if (dup) return;
       const d = dataFor(c.ticker);
+      const id = 'L' + Date.now() + '-' + c.ticker;
       log.push({
-        id: 'L' + Date.now() + '-' + c.ticker,
+        id, scanId: scanId || null,
         day, ts: nowEST() + ' EST', tsEpoch: Date.now(),
         universe: universe || 'quantum',
         ticker: c.ticker, name: d.name || '',
@@ -715,12 +789,15 @@
         edge_type: c.edge_type || '',
         story: c.story || '', call: c.call || '', probe: c.probe || '', honest_line: c.honest_line || '',
         entryPrice: d.price != null ? d.price : null,
+        snapshot: snapshotFor(c.ticker),
+        conditions: regime ? { lean: regime.lean || '', macro: regime.macro || '', posture: regime.posture || '' } : null,
+        timeline: [],
         status: 'pending', exitPrice: null, pctMove: null, resolvedTs: null, note: ''
       });
-      added++;
+      ids.push(id);
     });
     saveLog(log);
-    return added;
+    return ids;
   }
 
   function gateFor(n) {
@@ -760,11 +837,38 @@
     const arrow = e.direction === 'bullish' ? '▲' : (e.direction === 'bearish' ? '▼' : '◆');
     const ageDays = Math.floor((Date.now() - e.tsEpoch) / 86400000);
     const age = ageDays === 0 ? 'today' : ageDays + 'd ago';
+
+    // OPENING CONDITIONS — frozen at call time
+    let cond = '';
+    if (e.conditions && (e.conditions.macro || e.conditions.posture || e.conditions.lean)) {
+      cond = '<div class="cond"><span class="reg-lbl">Opening conditions</span> <span class="tag synth">synth</span>' +
+        (e.conditions.lean ? '<span class="reg-lean ' + esc(e.conditions.lean.toLowerCase()) + '">' + esc(e.conditions.lean) + '</span>' : '') +
+        '<span class="reg-text">' + esc(e.conditions.macro || '') + (e.conditions.posture ? ' &middot; ' + esc(e.conditions.posture) : '') + '</span></div>';
+    }
+
+    // WHAT CHANGED — append-only, dated timeline (never edits the thesis)
+    let timeline = '';
+    const tl = e.timeline || [];
+    timeline = '<div class="tl"><div class="tl-head">What changed since the call</div>';
+    if (tl.length) {
+      timeline += tl.map(n => '<div class="tl-row"><span class="tl-when">' + esc(n.ts) + '</span> ' + esc(n.text) + '</div>').join('');
+    } else if (e.status === 'pending') {
+      timeline += '<div class="tl-empty">Nothing logged yet — add events as the world moves (policy, partnership, news, fear/greed shift).</div>';
+    } else {
+      timeline += '<div class="tl-empty">No events were logged.</div>';
+    }
+    if (e.status === 'pending') {
+      timeline += '<div class="tl-add"><input type="text" id="tl-' + e.id + '" placeholder="e.g. Jun 4: $2B quantum grant confirmed" />' +
+        '<button class="secondary" data-note="' + e.id + '">Add event</button></div>';
+    }
+    timeline += '</div>';
+
     let block;
     if (e.status === 'pending') {
       block = '<div class="resolve-row">' +
         '<span class="lbl-sm">price now:</span>' +
         '<input type="text" id="rp-' + e.id + '" placeholder="$ exit price" />' +
+        '<input type="text" id="rv-' + e.id + '" placeholder="verdict: right read, or right outcome / wrong reason?" style="flex:1;min-width:180px;" />' +
         '<button data-resolve="' + e.id + '">Resolve</button>' +
         '<button class="secondary" data-scratch="' + e.id + '">Scratch</button>' +
         '<span class="lbl-sm">entry $' + (e.entryPrice != null ? e.entryPrice.toFixed(2) : '?') + '</span>' +
@@ -772,8 +876,15 @@
     } else {
       const mv = e.pctMove != null ? (e.pctMove > 0 ? '+' : '') + e.pctMove.toFixed(2) + '%' : '';
       block = '<div class="resolved-line">Resolved ' + esc(e.resolvedTs || '') + ' · entry $' + (e.entryPrice != null ? e.entryPrice.toFixed(2) : '?') +
-        (e.exitPrice != null ? ' → exit $' + e.exitPrice.toFixed(2) + ' (' + mv + ')' : '') +
-        (e.note ? ' · ' + esc(e.note) : '') + '</div>';
+        (e.exitPrice != null ? ' → exit $' + e.exitPrice.toFixed(2) + ' (' + mv + ')' : '') + '</div>' +
+        (e.note ? '<div class="verdict"><span class="reg-lbl">Verdict</span> ' + esc(e.note) + '</div>' : '');
+    }
+    let saw = '';
+    if (e.snapshot && e.snapshot.news && e.snapshot.news.length) {
+      saw = '<details class="saw"><summary>▸ what it saw at call time</summary>' +
+        '<div class="saw-body">' + e.snapshot.news.map(n =>
+          '<div class="saw-row"><a href="' + esc(n.link || '#') + '" target="_blank" rel="noopener">' + esc(n.title) + '</a> <span class="head-meta">— ' + esc(n.pub || '') + '</span></div>'
+        ).join('') + '</div></details>';
     }
     return '<div class="log-entry ' + (e.status !== 'pending' ? 'resolved' : '') + '">' +
       '<div class="log-top">' +
@@ -785,7 +896,7 @@
         '<span class="log-when">' + esc(e.ts) + ' · ' + age + '</span>' +
       '</div>' +
       '<div class="log-thesis"><b>' + esc(e.story) + '</b> — ' + esc(e.call) + '</div>' +
-      block +
+      cond + saw + timeline + block +
     '</div>';
   }
 
@@ -796,12 +907,15 @@
     $('log-list').innerHTML = log.length
       ? log.map(renderLogEntry).join('')
       : '<div class="empty">No calls logged yet. Edge calls are logged automatically the moment ORION makes them — then you resolve them honestly here, later.</div>';
+    renderScanHistory();
   }
 
   function resolveEntry(id) {
     const inp = $('rp-' + id);
     const exit = parseFloat(((inp && inp.value) || '').replace(/[^0-9.]/g, ''));
     if (!isFinite(exit)) { if (inp) { inp.style.borderColor = 'var(--bad)'; inp.placeholder = 'enter a price'; } return; }
+    const verdictEl = $('rv-' + id);
+    const verdict = verdictEl ? verdictEl.value.trim() : '';
     const log = getLog();
     const e = log.find(x => x.id === id);
     if (!e) return;
@@ -813,19 +927,35 @@
       else e.status = 'scratch';
     } else { e.status = 'scratch'; }
     e.resolvedTs = nowEST() + ' EST';
+    if (verdict) e.note = verdict;
     saveLog(log); renderLog();
   }
   function scratchEntry(id) {
     const log = getLog();
     const e = log.find(x => x.id === id);
     if (!e) return;
-    e.status = 'scratch'; e.resolvedTs = nowEST() + ' EST'; e.note = 'scratched — thesis invalidated, not scored';
+    const verdictEl = $('rv-' + id);
+    const verdict = verdictEl ? verdictEl.value.trim() : '';
+    e.status = 'scratch'; e.resolvedTs = nowEST() + ' EST';
+    e.note = verdict || 'scratched — thesis invalidated, not scored';
+    saveLog(log); renderLog();
+  }
+  function addNote(id) {
+    const inp = $('tl-' + id);
+    const text = inp ? inp.value.trim() : '';
+    if (!text) { if (inp) inp.style.borderColor = 'var(--bad)'; return; }
+    const log = getLog();
+    const e = log.find(x => x.id === id);
+    if (!e) return;
+    if (!e.timeline) e.timeline = [];
+    e.timeline.push({ ts: nowEST() + ' EST', tsEpoch: Date.now(), text });
     saveLog(log); renderLog();
   }
   $('log-list').addEventListener('click', (ev) => {
     const r = ev.target.getAttribute('data-resolve');
     const s = ev.target.getAttribute('data-scratch');
-    if (r) resolveEntry(r); else if (s) scratchEntry(s);
+    const n = ev.target.getAttribute('data-note');
+    if (r) resolveEntry(r); else if (s) scratchEntry(s); else if (n) addNote(n);
   });
 
   // ===== VIEW TOGGLE =====
@@ -838,6 +968,106 @@
   }
   $('vt-board').onclick = () => setView('board');
   $('vt-log').onclick = () => setView('log');
+
+  // ===== SCAN ARCHIVE — raw on every scan, judged board on every analyze =====
+  // Prune rule: drop records older than 21 days ONLY if they produced no edge call.
+  // Anything that produced an edge is kept (its context backs a real call). Edge-call log is separate & permanent.
+  const SCANS_KEY = 'orion_scans_v1';
+  const PRUNE_MS = 21 * 86400000;
+  function getScans() { try { return JSON.parse(localStorage.getItem(SCANS_KEY) || '[]'); } catch(e) { return []; } }
+  function pruneScans(arr) {
+    const cut = Date.now() - PRUNE_MS;
+    return arr.filter(s => s.tsEpoch >= cut || s.hadEdge);
+  }
+  function saveScans(arr) {
+    let data = pruneScans(arr);
+    try {
+      localStorage.setItem(SCANS_KEY, JSON.stringify(data));
+    } catch (e) {
+      // Quota hit — drop oldest no-edge records and retry once, loudly (no silent failure).
+      logLine('⚠ storage full — pruning oldest no-edge scans', 'err');
+      data = data.filter(s => s.hadEdge).concat(
+        data.filter(s => !s.hadEdge).sort((a, b) => b.tsEpoch - a.tsEpoch).slice(0, 10)
+      );
+      try { localStorage.setItem(SCANS_KEY, JSON.stringify(data)); }
+      catch (e2) { logLine('✗ storage still full after prune — scan archive not saved', 'err'); }
+    }
+  }
+  function trimRaw(results) {
+    return results.map(r => ({
+      t: r.t, name: r.name, grp: r.grp,
+      price: r.price != null ? r.price : null,
+      chg: r.chg != null ? r.chg : null,
+      news: (r.news || []).slice(0, 8).map(n => ({ title: n.title, pub: n.pub, time: n.time, link: n.link }))
+    }));
+  }
+  function recordGather(results) {
+    const scans = getScans();
+    const id = 'S' + Date.now();
+    scans.push({
+      id, ts: nowEST() + ' EST', tsEpoch: Date.now(), day: todayEST(), universe: 'quantum',
+      kind: 'gather', raw: trimRaw(results),
+      calls: null, counts: null, hadEdge: false, loggedIds: []
+    });
+    saveScans(scans);
+    lastScanId = id;
+    return id;
+  }
+  function recordAnalysis(calls, counts, loggedIds, regime) {
+    const scans = getScans();
+    let s = scans.find(x => x.id === lastScanId);
+    if (!s) {
+      s = { id: 'S' + Date.now(), ts: nowEST() + ' EST', tsEpoch: Date.now(), day: todayEST(),
+            universe: 'quantum', kind: 'analysis', raw: trimRaw(lastResults) };
+      scans.push(s);
+      lastScanId = s.id;
+    }
+    s.kind = 'analysis';
+    s.analyzedTs = nowEST() + ' EST';
+    s.regime = regime || null;
+    s.calls = calls.map(c => ({ ticker: c.ticker, tier: c.tier, direction: c.direction, confidence: c.confidence,
+      edge_type: c.edge_type, story: c.story, arc: c.arc, call: c.call, probe: c.probe }));
+    s.counts = counts;
+    s.hadEdge = counts.edge > 0;
+    s.loggedIds = loggedIds || [];
+    saveScans(scans);
+  }
+
+  function renderScanRow(s) {
+    const head = s.kind === 'analysis'
+      ? 'analyzed · ' + s.counts.edge + ' edge / ' + s.counts.watch + ' watch / ' + s.counts.pass + ' pass'
+      : 'gathered (not analyzed)';
+    let body = '<div class="scan-body">';
+    if (s.kind === 'analysis' && s.calls) {
+      const order = { edge: 0, watch: 1, pass: 2 };
+      s.calls.slice().sort((a, b) => (order[a.tier] - order[b.tier])).forEach(c => {
+        body += '<div class="scan-call"><span class="tkr-sm">' + esc(c.ticker) + '</span> ' +
+          '<span class="scan-tier ' + c.tier + '">' + c.tier + '</span> ' +
+          '<span class="scan-line">' + esc(c.story || '') + '</span></div>';
+      });
+    } else {
+      (s.raw || []).forEach(r => {
+        const chg = r.chg == null ? '' : (r.chg > 0 ? '+' : '') + r.chg.toFixed(1) + '%';
+        body += '<div class="scan-call"><span class="tkr-sm">' + esc(r.t) + '</span> ' +
+          '<span class="scan-line">$' + (r.price != null ? r.price.toFixed(2) : '?') + ' ' + chg +
+          ' · ' + (r.news ? r.news.length : 0) + ' headlines</span></div>';
+      });
+    }
+    body += '</div>';
+    return '<details class="scan-rec' + (s.hadEdge ? ' kept' : '') + '">' +
+      '<summary><span class="scan-when">' + esc(s.ts) + '</span> · ' + head +
+      (s.hadEdge ? ' <span class="scan-keep">kept</span>' : '') + '</summary>' + body + '</details>';
+  }
+
+  function renderScanHistory() {
+    const scans = getScans().slice().sort((a, b) => b.tsEpoch - a.tsEpoch);
+    const noEdge = scans.filter(s => !s.hadEdge).length;
+    let html = '<div class="hist-head">Scan history <span class="count">' + scans.length + ' kept</span></div>' +
+      '<div class="hist-note">Raw gather on every scan, judged board on every analyze. No-edge scans auto-clear after 21 days (' +
+      noEdge + ' on the clock); scans that produced an edge are kept with the call.</div>';
+    html += scans.length ? scans.map(renderScanRow).join('') : '<div class="empty">No scans archived yet.</div>';
+    $('hist-list').innerHTML = html;
+  }
 
   // ===== CONNECTION TEST =====
   async function testConnection() {
