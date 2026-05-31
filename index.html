@@ -213,6 +213,15 @@
   .tl-add button { height: 32px; padding: 0 12px; font-size: 12px; }
   .verdict { font-size: 13px; color: var(--text); margin-top: 8px; padding: 8px 11px; background: var(--bg-soft); border-radius: 8px; }
   .verdict .reg-lbl { margin-right: 6px; }
+  /* STRUCTURED BET */
+  .struct { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 10px 0; padding: 9px 12px; background: var(--bg-soft); border-radius: 8px; }
+  .cp { font-family: var(--mono); font-size: 12px; font-weight: 700; letter-spacing: 0.5px; padding: 3px 9px; border-radius: 6px; }
+  .cp.call { background: var(--good-bg); color: var(--good); }
+  .cp.put { background: var(--bad-bg); color: var(--bad); }
+  .struct-bit { font-size: 12.5px; color: var(--text); display: inline-flex; gap: 5px; align-items: baseline; }
+  .struct-bit .sk { font-size: 9px; font-weight: 700; letter-spacing: 0.6px; text-transform: uppercase; color: var(--text-faint); }
+  .due { font-size: 11px; font-family: var(--mono); color: var(--info); background: var(--info-bg); padding: 2px 7px; border-radius: 5px; }
+  .due.over { color: var(--bad); background: var(--bad-bg); }
 </style>
 </head>
 <body>
@@ -580,6 +589,8 @@
       "",
       "The 'regime' is your read of the OPENING CONDITIONS — the environment these calls are being made into. It is frozen with each call so a future outcome can be judged against the world at call time. It is a [SYNTH] read from the headlines you have, not hard market data.",
       "",
+      "For EDGE calls ONLY, also commit to a 'structure' — the SHAPE of the bet your thesis implies. This is NOT a priced or sized trade and you have NO live options data: name the shape, never a premium or position size. contract = call (bullish) or put (bearish); strike = a level or tight zone relative to the underlying price given below (e.g. 'ATM ~$72' or 'slightly OTM ~$80'); expiry = a window matched to the catalyst timing (e.g. '3-5 weeks out, to cover the IPO window'); target = the underlying move that proves it right; stop = the move/level that kills it; horizon_days = your best estimate of days until it resolves. For watch and pass, set structure to null. Add 'structure' to each call object: \"structure\":{\"contract\":\"call|put\",\"strike\":\"\",\"expiry\":\"\",\"target\":\"\",\"stop\":\"\",\"horizon_days\":0}",
+      "",
       "TRENDING QUANTUM NAMES:",
       names
     ].join('\n');
@@ -645,9 +656,23 @@
         '<span class="tag synth">synth</span>' +
       '</div>' +
       '<div class="story-line"><b>' + esc(c.story || '') + '</b> &middot; <span class="arc">' + esc(c.arc || '') + '</span></div>' +
+      renderStructure(c.structure) +
       '<div class="block call"><div class="lbl">The Call</div><div class="block-body">' + esc(c.call || '') + '</div></div>' +
       (c.probe ? '<div class="block"><div class="lbl">The Probe</div><div class="block-body">' + esc(c.probe) + '</div></div>' : '') +
       '<div class="block honest"><div class="lbl">The Honest Line</div><div class="block-body">' + esc(c.honest_line || '') + '</div></div>' +
+    '</div>';
+  }
+
+  function renderStructure(s) {
+    if (!s || !s.contract) return '';
+    const cp = (s.contract || '').toLowerCase();
+    return '<div class="struct">' +
+      '<span class="cp ' + cp + '">' + (cp === 'put' ? '▼ PUT' : '▲ CALL') + '</span>' +
+      (s.strike ? '<span class="struct-bit"><span class="sk">strike</span>' + esc(s.strike) + '</span>' : '') +
+      (s.expiry ? '<span class="struct-bit"><span class="sk">expiry</span>' + esc(s.expiry) + '</span>' : '') +
+      (s.target ? '<span class="struct-bit"><span class="sk">target</span>' + esc(s.target) + '</span>' : '') +
+      (s.stop ? '<span class="struct-bit"><span class="sk">stop</span>' + esc(s.stop) + '</span>' : '') +
+      '<span class="tag synth">synth · shape only, not priced</span>' +
     '</div>';
   }
 
@@ -791,6 +816,8 @@
         entryPrice: d.price != null ? d.price : null,
         snapshot: snapshotFor(c.ticker),
         conditions: regime ? { lean: regime.lean || '', macro: regime.macro || '', posture: regime.posture || '' } : null,
+        structure: c.structure || null,
+        resolveBy: (c.structure && c.structure.horizon_days > 0) ? Date.now() + c.structure.horizon_days * 86400000 : null,
         timeline: [],
         status: 'pending', exitPrice: null, pctMove: null, resolvedTs: null, note: ''
       });
@@ -846,6 +873,15 @@
         '<span class="reg-text">' + esc(e.conditions.macro || '') + (e.conditions.posture ? ' &middot; ' + esc(e.conditions.posture) : '') + '</span></div>';
     }
 
+    // STRUCTURE + resolve-by date
+    const struct = renderStructure(e.structure);
+    let due = '';
+    if (e.status === 'pending' && e.resolveBy) {
+      const left = Math.round((e.resolveBy - Date.now()) / 86400000);
+      const dueDate = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric' }).format(new Date(e.resolveBy));
+      due = '<span class="due ' + (left < 0 ? 'over' : '') + '">' + (left < 0 ? 'overdue to resolve (' + dueDate + ')' : 'resolve by ' + dueDate + ' · ' + left + 'd') + '</span>';
+    }
+
     // WHAT CHANGED — append-only, dated timeline (never edits the thesis)
     let timeline = '';
     const tl = e.timeline || [];
@@ -893,10 +929,11 @@
         '<span class="conf">' + esc(e.confidence) + ' conf</span>' +
         (e.edge_type ? '<span class="badge-' + (e.edge_type === 'contrarian' ? 'contrarian' : 'early') + '">' + esc(e.edge_type) + '</span>' : '') +
         '<span class="status-pill ' + e.status + '">' + e.status + '</span>' +
+        due +
         '<span class="log-when">' + esc(e.ts) + ' · ' + age + '</span>' +
       '</div>' +
       '<div class="log-thesis"><b>' + esc(e.story) + '</b> — ' + esc(e.call) + '</div>' +
-      cond + saw + timeline + block +
+      struct + cond + saw + timeline + block +
     '</div>';
   }
 
@@ -1026,7 +1063,7 @@
     s.analyzedTs = nowEST() + ' EST';
     s.regime = regime || null;
     s.calls = calls.map(c => ({ ticker: c.ticker, tier: c.tier, direction: c.direction, confidence: c.confidence,
-      edge_type: c.edge_type, story: c.story, arc: c.arc, call: c.call, probe: c.probe }));
+      edge_type: c.edge_type, story: c.story, arc: c.arc, call: c.call, probe: c.probe, structure: c.structure || null }));
     s.counts = counts;
     s.hadEdge = counts.edge > 0;
     s.loggedIds = loggedIds || [];
