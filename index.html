@@ -222,6 +222,8 @@
   .struct-bit .sk { font-size: 9px; font-weight: 700; letter-spacing: 0.6px; text-transform: uppercase; color: var(--text-faint); }
   .due { font-size: 11px; font-family: var(--mono); color: var(--info); background: var(--info-bg); padding: 2px 7px; border-radius: 5px; }
   .due.over { color: var(--bad); background: var(--bad-bg); }
+  .scan-uni { font-size: 10px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; color: var(--text-soft); }
+  .acc-uni + .acc-uni { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border-soft); }
 </style>
 </head>
 <body>
@@ -241,14 +243,14 @@
   <div id="view-board">
   <div class="controls">
     <button class="chip active" id="u-quantum" data-u="quantum">Quantum</button>
+    <button class="chip" id="u-space" data-u="space">Space</button>
     <button class="chip" id="u-ai" data-u="ai" disabled>AI · soon</button>
-    <button class="chip" id="u-space" data-u="space" disabled>Space · soon</button>
     <span class="spacer"></span>
     <button id="scan-btn">Run scan</button>
     <button id="analyze-btn" disabled>Analyze →</button>
   </div>
 
-  <div class="status" id="status">Ready. Click <b>Run scan</b> to gather the live Quantum narrative.</div>
+  <div class="status" id="status">Ready. Pick a universe, then click <b>Run scan</b> to gather the live narrative.</div>
   <pre id="scan-log" style="display:none; background:var(--bg-soft); border:1px solid var(--border-soft); border-radius:8px; padding:10px 13px; font-family:var(--mono); font-size:11.5px; line-height:1.6; color:var(--text-soft); margin:0 0 16px; max-height:220px; overflow:auto; white-space:pre-wrap;"></pre>
 
   <div id="regime-banner" style="display:none;"></div>
@@ -298,7 +300,7 @@
   </details>
 
   <div class="foot">
-    ORION v1 · Quantum · gather → judge → log · narrative agent, in-session only<br>
+    ORION v1 · Quantum + Space · gather → judge → log · narrative agent, in-session only<br>
     Analysis &amp; hypothesis, <b>not financial advice.</b> ORION proposes; you pull the trigger.
   </div>
 
@@ -373,20 +375,43 @@
     return { ok: false, error: lastErr };
   }
 
-  // ===== UNIVERSE: QUANTUM (anchors from Charter §2) =====
-  // Pure-plays carry the quantum narrative; big-tech/foundry where quantum is a
-  // meaningful part of the story. GOOGL/MSFT deliberately excluded — their quantum
-  // work is real but their stock narrative is dominated by other things (noise > signal).
-  const QUANTUM = [
-    { t: 'IONQ',  name: 'IonQ',                  grp: 'pure-play' },
-    { t: 'RGTI',  name: 'Rigetti Computing',     grp: 'pure-play' },
-    { t: 'QBTS',  name: 'D-Wave Quantum',        grp: 'pure-play' },
-    { t: 'QUBT',  name: 'Quantum Computing Inc', grp: 'pure-play' },
-    { t: 'ARQQ',  name: 'Arqit Quantum',         grp: 'pure-play' },
-    { t: 'IBM',   name: 'IBM',                    grp: 'big-tech' },
-    { t: 'HON',   name: 'Honeywell (Quantinuum)', grp: 'big-tech' },
-    { t: 'GFS',   name: 'GlobalFoundries',        grp: 'foundry' }
-  ];
+  // ===== UNIVERSES (anchors from Charter §2–3) =====
+  // Per universe: the scan set is the names where that sector IS the story.
+  // Diversified giants whose narrative is dominated by other things are excluded by design (noise > signal).
+  const UNIVERSES = {
+    quantum: {
+      label: 'Quantum',
+      note: "Quantum names are narrative-driven and thin on fundamentals — handle with the MOST skepticism.",
+      names: [
+        { t: 'IONQ', name: 'IonQ',                  grp: 'pure-play' },
+        { t: 'RGTI', name: 'Rigetti Computing',     grp: 'pure-play' },
+        { t: 'QBTS', name: 'D-Wave Quantum',        grp: 'pure-play' },
+        { t: 'QUBT', name: 'Quantum Computing Inc', grp: 'pure-play' },
+        { t: 'ARQQ', name: 'Arqit Quantum',         grp: 'pure-play' },
+        { t: 'IBM',  name: 'IBM',                    grp: 'big-tech' },
+        { t: 'HON',  name: 'Honeywell (Quantinuum)', grp: 'big-tech' },
+        { t: 'GFS',  name: 'GlobalFoundries',        grp: 'foundry' }
+      ]
+      // GOOGL/MSFT excluded: quantum work real, but stock narrative dominated by other things.
+    },
+    space: {
+      label: 'Space',
+      note: "Space is the earliest, least-covered frontier — pre-IPO debris, ex-SPACs, illiquid options, very uneven data. Verify aggressively; many of these move on narrative far ahead of fundamentals.",
+      names: [
+        { t: 'RKLB', name: 'Rocket Lab',          grp: 'launch' },
+        { t: 'ASTS', name: 'AST SpaceMobile',     grp: 'sat-comms' },
+        { t: 'LUNR', name: 'Intuitive Machines',  grp: 'infrastructure' },
+        { t: 'RDW',  name: 'Redwire',             grp: 'infrastructure' },
+        { t: 'PL',   name: 'Planet Labs',         grp: 'earth-obs' },
+        { t: 'BKSY', name: 'BlackSky',            grp: 'earth-obs' },
+        { t: 'IRDM', name: 'Iridium',             grp: 'sat-comms' },
+        { t: 'GSAT', name: 'Globalstar',          grp: 'sat-comms' }
+      ]
+      // Big defense primes (LMT/NOC/RTX/BA) excluded: space is a sliver of their story — noise > signal.
+    }
+  };
+  let currentUniverse = 'quantum';
+  function uni() { return UNIVERSES[currentUniverse]; }
 
   // ===== NARRATIVE GATHERING (Yahoo: price + news) =====
   async function getQuote(t) {
@@ -485,14 +510,16 @@
     $('status').innerHTML = '<span class="spinner"></span>Scan started…';
     $('watch-list').innerHTML = '';
     $('regime-banner').style.display = 'none';
-    logLine('— ORION Quantum scan · ' + stamp + ' EST —');
+    const U = uni();
+    logLine('— ORION ' + U.label + ' scan · ' + stamp + ' EST —');
     logLine('proxies (in order): ' + PROXIES.map(p => p.name).join(' → '));
 
     try {
       const results = [];
-      for (let i = 0; i < QUANTUM.length; i++) {
-        const q = QUANTUM[i];
-        $('status').innerHTML = '<span class="spinner"></span>Gathering — ' + q.t + ' (' + (i+1) + '/' + QUANTUM.length + ')…';
+      const NAMES = U.names;
+      for (let i = 0; i < NAMES.length; i++) {
+        const q = NAMES[i];
+        $('status').innerHTML = '<span class="spinner"></span>Gathering — ' + q.t + ' (' + (i+1) + '/' + NAMES.length + ')…';
         const [quote, news] = await Promise.all([getQuote(q.t), getNews(q.t)]);
 
         if (quote.ok) logLine('✓ ' + q.t + ' price $' + (quote.price != null ? quote.price.toFixed(2) : '?') + ' via ' + (quote.via || '?'), 'ok');
@@ -515,9 +542,9 @@
       $('watch-list').innerHTML = results.map(renderWatchCard).join('') || '<div class="empty">No data this scan — see the log above.</div>';
       $('watch-count').textContent = results.length + ' names';
 
-      $('edge-list').innerHTML = '<div class="empty">Calls populate once the analysis engine is wired — the next build step. Right now ORION is only gathering; it isn\'t judging yet.</div>';
+      $('edge-list').innerHTML = '<div class="empty">Run Analyze to turn this gathered narrative into ORION\'s calls.</div>';
       $('edge-count').textContent = '0';
-      $('pass-list').innerHTML = '<div class="empty">Passes appear alongside calls once the engine runs.</div>';
+      $('pass-list').innerHTML = '<div class="empty">Passes appear alongside calls once you Analyze.</div>';
       $('pass-count').textContent = '0';
 
       const reached = results.filter(r => r.price != null || r.news.length > 0).length;
@@ -527,7 +554,7 @@
         $('status').innerHTML = 'Every source failed this scan. The log above shows why per name — usually proxy rate-limiting. Try again in ~30s, or open the hosted GitHub Pages URL (more reliable than a local file).';
       } else {
         $('status').innerHTML = 'Scan complete · ' + stamp + ' EST · reached ' + reached + '/' + results.length +
-          ' Quantum names. Sorted by attention. Full per-name log above.';
+          ' ' + U.label + ' names. Sorted by attention. Full per-name log above.';
         refreshAnalyzeBtn(true);
       }
     } catch (e) {
@@ -575,7 +602,7 @@
       "",
       "THE LAW (the edge rule, non-negotiable): every directional call must be EARLY ('this story is forming, get ahead of it') or CONTRARIAN ('the loud story is wrong, here's why'). If a move is already consensus and priced in, you PASS — a pass is a real, honest output, never a failure. Echoing the crowd late is the 80% retail trap and is forbidden. The day you agree with consensus you are worthless.",
       "",
-      "Be disciplined: MOST names should be 'watch' or 'pass'. A board full of confident 'edge' calls means you have fallen into the consensus trap. One or two sharp, defensible edges is a GOOD result. Skepticism is the default. Quantum names especially are narrative-driven and thin on fundamentals — handle with the most skepticism.",
+      "Be disciplined: MOST names should be 'watch' or 'pass'. A board full of confident 'edge' calls means you have fallen into the consensus trap. One or two sharp, defensible edges is a GOOD result. Skepticism is the default. " + uni().note,
       "",
       "It is " + stamp + " EST · " + mkt + ". On a weekend the prices are last close and may be stale — factor that into confidence. You ran on FREE PUBLIC NARRATIVE only (price, % move, headlines below). You did NOT have live institutional options flow.",
       "",
@@ -591,7 +618,7 @@
       "",
       "For EDGE calls ONLY, also commit to a 'structure' — the SHAPE of the bet your thesis implies. This is NOT a priced or sized trade and you have NO live options data: name the shape, never a premium or position size. contract = call (bullish) or put (bearish); strike = a level or tight zone relative to the underlying price given below (e.g. 'ATM ~$72' or 'slightly OTM ~$80'); expiry = a window matched to the catalyst timing (e.g. '3-5 weeks out, to cover the IPO window'); target = the underlying move that proves it right; stop = the move/level that kills it; horizon_days = your best estimate of days until it resolves. For watch and pass, set structure to null. Add 'structure' to each call object: \"structure\":{\"contract\":\"call|put\",\"strike\":\"\",\"expiry\":\"\",\"target\":\"\",\"stop\":\"\",\"horizon_days\":0}",
       "",
-      "TRENDING QUANTUM NAMES:",
+      "TRENDING " + uni().label.toUpperCase() + " NAMES:",
       names
     ].join('\n');
   }
@@ -756,7 +783,7 @@
       $('pass-count').textContent = pass.length;
 
       logLine('✓ calls: ' + edges.length + ' edge · ' + watch.length + ' watch · ' + pass.length + ' pass', 'ok');
-      const loggedIds = logEdgeCalls(edges, 'quantum', lastScanId, regime);
+      const loggedIds = logEdgeCalls(edges, currentUniverse, lastScanId, regime);
       recordAnalysis(calls, { edge: edges.length, watch: watch.length, pass: pass.length }, loggedIds, regime);
       $('vt-log-count').textContent = getLog().length ? '(' + getLog().length + ')' : '';
       if (loggedIds.length) logLine('✓ logged ' + loggedIds.length + ' edge call' + (loggedIds.length === 1 ? '' : 's') + ' with snapshot (frozen)', 'ok');
@@ -835,15 +862,14 @@
   }
   function statBox(n, l) { return '<div class="acc-stat"><span class="n">' + n + '</span><span class="l">' + l + '</span></div>'; }
 
-  function renderAcc() {
-    const log = getLog();
-    const scored = log.filter(e => e.status === 'win' || e.status === 'loss');
+  function accBlock(label, entries) {
+    const scored = entries.filter(e => e.status === 'win' || e.status === 'loss');
     const wins = scored.filter(e => e.status === 'win').length;
-    const pending = log.filter(e => e.status === 'pending').length;
+    const pending = entries.filter(e => e.status === 'pending').length;
     const gate = gateFor(scored.length);
-    let html = '<div class="acc-title">Accuracy · Quantum &nbsp;<span class="gate ' + gate.cls + '">' + gate.label + '</span></div>';
+    let html = '<div class="acc-title">Accuracy · ' + esc(label) + ' &nbsp;<span class="gate ' + gate.cls + '">' + gate.label + '</span></div>';
     html += '<div class="acc-stats">' +
-      statBox(log.length, 'logged') + statBox(pending, 'pending') + statBox(scored.length, 'resolved') +
+      statBox(entries.length, 'logged') + statBox(pending, 'pending') + statBox(scored.length, 'resolved') +
       statBox(scored.length >= 5 ? Math.round(wins / scored.length * 100) + '%' : '—', 'hit rate') + '</div>';
     if (scored.length < 5) {
       html += '<div class="acc-note">Hit rate stays hidden until 5 calls are resolved — no win-rate claims on a tiny sample (the V1 lesson). ' + (5 - scored.length) + ' more to go.</div>';
@@ -856,6 +882,24 @@
         html += '<div class="calib-row"><span class="cw">' + k + '</span> ' + b.w + '/' + b.n + ' won (' + Math.round(b.w / b.n * 100) + '%)</div>';
       });
       html += '</div>';
+    }
+    return html;
+  }
+
+  function renderAcc() {
+    const log = getLog();
+    // One accuracy block per universe that has calls (Charter: accuracy BY universe).
+    const present = [];
+    Object.keys(UNIVERSES).forEach(u => { if (log.some(e => e.universe === u)) present.push(u); });
+    log.forEach(e => { if (e.universe && UNIVERSES[e.universe] === undefined && present.indexOf(e.universe) < 0) present.push(e.universe); });
+    let html;
+    if (!present.length) {
+      html = accBlock(uni().label, []);
+    } else {
+      html = present.map(u => {
+        const label = UNIVERSES[u] ? UNIVERSES[u].label : u;
+        return '<div class="acc-uni">' + accBlock(label, log.filter(e => e.universe === u)) + '</div>';
+      }).join('');
     }
     $('acc-panel').innerHTML = html;
   }
@@ -1006,6 +1050,26 @@
   $('vt-board').onclick = () => setView('board');
   $('vt-log').onclick = () => setView('log');
 
+  // ===== UNIVERSE SWITCHING =====
+  function switchUniverse(u) {
+    if (!UNIVERSES[u] || u === currentUniverse) return;
+    currentUniverse = u;
+    ['quantum', 'space', 'ai'].forEach(k => { const el = $('u-' + k); if (el) el.classList.toggle('active', k === u); });
+    // universe-specific board — clear it; gather is per universe
+    lastResults = []; lastScanId = null;
+    $('watch-list').innerHTML = '<div class="empty">No scan run yet.</div>';
+    $('watch-count').textContent = '';
+    $('edge-list').innerHTML = ''; $('edge-count').textContent = '';
+    $('pass-list').innerHTML = ''; $('pass-count').textContent = '';
+    $('regime-banner').style.display = 'none';
+    $('scan-log').style.display = 'none'; $('scan-log').textContent = '';
+    $('status').className = 'status';
+    $('status').innerHTML = 'Switched to <b>' + uni().label + '</b>. Click <b>Run scan</b> to gather the live ' + uni().label + ' narrative.';
+    refreshAnalyzeBtn(false);
+  }
+  $('u-quantum').onclick = () => switchUniverse('quantum');
+  $('u-space').onclick = () => switchUniverse('space');
+
   // ===== SCAN ARCHIVE — raw on every scan, judged board on every analyze =====
   // Prune rule: drop records older than 21 days ONLY if they produced no edge call.
   // Anything that produced an edge is kept (its context backs a real call). Edge-call log is separate & permanent.
@@ -1042,7 +1106,7 @@
     const scans = getScans();
     const id = 'S' + Date.now();
     scans.push({
-      id, ts: nowEST() + ' EST', tsEpoch: Date.now(), day: todayEST(), universe: 'quantum',
+      id, ts: nowEST() + ' EST', tsEpoch: Date.now(), day: todayEST(), universe: currentUniverse,
       kind: 'gather', raw: trimRaw(results),
       calls: null, counts: null, hadEdge: false, loggedIds: []
     });
@@ -1055,7 +1119,7 @@
     let s = scans.find(x => x.id === lastScanId);
     if (!s) {
       s = { id: 'S' + Date.now(), ts: nowEST() + ' EST', tsEpoch: Date.now(), day: todayEST(),
-            universe: 'quantum', kind: 'analysis', raw: trimRaw(lastResults) };
+            universe: currentUniverse, kind: 'analysis', raw: trimRaw(lastResults) };
       scans.push(s);
       lastScanId = s.id;
     }
@@ -1092,7 +1156,7 @@
     }
     body += '</div>';
     return '<details class="scan-rec' + (s.hadEdge ? ' kept' : '') + '">' +
-      '<summary><span class="scan-when">' + esc(s.ts) + '</span> · ' + head +
+      '<summary><span class="scan-when">' + esc(s.ts) + '</span> · <span class="scan-uni">' + esc((UNIVERSES[s.universe] ? UNIVERSES[s.universe].label : s.universe) || '') + '</span> · ' + head +
       (s.hadEdge ? ' <span class="scan-keep">kept</span>' : '') + '</summary>' + body + '</details>';
   }
 
