@@ -244,7 +244,7 @@
   <div class="controls">
     <button class="chip active" id="u-quantum" data-u="quantum">Quantum</button>
     <button class="chip" id="u-space" data-u="space">Space</button>
-    <button class="chip" id="u-ai" data-u="ai" disabled>AI · soon</button>
+    <button class="chip" id="u-ai" data-u="ai">AI</button>
     <span class="spacer"></span>
     <button id="scan-btn">Run scan</button>
     <button id="analyze-btn" disabled>Analyze →</button>
@@ -300,7 +300,7 @@
   </details>
 
   <div class="foot">
-    ORION v1 · Quantum + Space · gather → judge → log · narrative agent, in-session only<br>
+    ORION v1 · AI + Quantum + Space · gather → judge → log · narrative agent, in-session only<br>
     Analysis &amp; hypothesis, <b>not financial advice.</b> ORION proposes; you pull the trigger.
   </div>
 
@@ -408,6 +408,21 @@
         { t: 'GSAT', name: 'Globalstar',          grp: 'sat-comms' }
       ]
       // Big defense primes (LMT/NOC/RTX/BA) excluded: space is a sliver of their story — noise > signal.
+    },
+    ai: {
+      label: 'AI',
+      note: "AI is the most-covered, most-saturated frontier — edges are RAREST here because every story is picked over and priced within hours. Be extra ruthless: pass anything that is just the dominant 'AI buildout' narrative repackaged. An AI edge must be genuinely early or truly contrarian, or it is the 80% retail trap.",
+      names: [
+        { t: 'NVDA', name: 'Nvidia',        grp: 'compute' },
+        { t: 'AVGO', name: 'Broadcom',      grp: 'silicon' },
+        { t: 'MRVL', name: 'Marvell',       grp: 'silicon' },
+        { t: 'CRWV', name: 'CoreWeave',     grp: 'ai-infra' },
+        { t: 'SMCI', name: 'Super Micro',   grp: 'ai-infra' },
+        { t: 'VRT',  name: 'Vertiv',        grp: 'power-cooling' },
+        { t: 'VST',  name: 'Vistra',        grp: 'power' },
+        { t: 'OKLO', name: 'Oklo',          grp: 'power-nuclear' }
+      ]
+      // Mega-caps (MSFT/GOOGL/AMZN/META/ORCL) excluded: AI is one of many drivers — narrative too diffuse to read as an AI name.
     }
   };
   let currentUniverse = 'quantum';
@@ -1069,6 +1084,7 @@
   }
   $('u-quantum').onclick = () => switchUniverse('quantum');
   $('u-space').onclick = () => switchUniverse('space');
+  $('u-ai').onclick = () => switchUniverse('ai');
 
   // ===== SCAN ARCHIVE — raw on every scan, judged board on every analyze =====
   // Prune rule: drop records older than 21 days ONLY if they produced no edge call.
