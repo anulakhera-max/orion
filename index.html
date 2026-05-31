@@ -224,6 +224,20 @@
   .due.over { color: var(--bad); background: var(--bad-bg); }
   .scan-uni { font-size: 10px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; color: var(--text-soft); }
   .acc-uni + .acc-uni { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border-soft); }
+  /* ROTATION VIEW */
+  .rot-intro { background: var(--bg-soft); border-radius: 12px; padding: 16px 18px; margin-bottom: 16px; }
+  .rot-intro p { margin: 0 0 12px; font-size: 13.5px; color: var(--text-soft); line-height: 1.55; }
+  .rot-intro p b { color: var(--text); }
+  .rot-verdict { background: var(--bg-info); border-radius: 12px; padding: 14px 16px; margin-bottom: 16px; }
+  .rot-verdict-text { font-family: var(--serif); font-size: 17px; line-height: 1.4; color: var(--text); margin-top: 6px; }
+  .rot-card { background: var(--bg-card); border: 1px solid var(--border-soft); border-radius: 10px; padding: 13px 15px; margin-bottom: 9px; }
+  .rot-card-top { display: flex; gap: 9px; align-items: center; flex-wrap: wrap; }
+  .rot-uni { font-family: var(--serif); font-size: 16px; font-weight: 500; }
+  .posture { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; padding: 2px 8px; border-radius: 5px; }
+  .posture.up { background: var(--good-bg); color: var(--good); }
+  .posture.down { background: var(--bad-bg); color: var(--bad); }
+  .posture.flat { background: var(--bg-soft); color: var(--text-soft); }
+  .rot-why { font-size: 13px; color: var(--text-soft); margin-top: 8px; line-height: 1.5; }
 </style>
 </head>
 <body>
@@ -237,6 +251,7 @@
 
   <div class="vtabs">
     <button class="vtab active" id="vt-board" data-v="board">Board</button>
+    <button class="vtab" id="vt-rotation" data-v="rotation">Rotation</button>
     <button class="vtab" id="vt-log" data-v="log">Log &amp; accuracy <span class="vtab-count" id="vt-log-count"></span></button>
   </div>
 
@@ -276,6 +291,15 @@
     <div id="pass-list"></div>
   </div>
   </div><!-- /view-board -->
+
+  <div id="view-rotation" style="display:none;">
+    <div class="rot-intro">
+      <p>Reads all three frontiers <b>at once</b> to spot capital repositioning — is money rotating out of crowded AI into speculative Quantum / Space, or the reverse? A <span class="tag synth">synth</span> read from relative price action and narrative, <b>not</b> fund-flow data.</p>
+      <button id="rot-btn">Run rotation read</button>
+    </div>
+    <div class="status" id="rot-status"></div>
+    <div id="rot-out"></div>
+  </div>
 
   <div id="view-log" style="display:none;">
     <div class="panel-acc" id="acc-panel"></div>
@@ -616,6 +640,8 @@
       "You are ORION, the frontier narrative scout of the NEXUS family. You read the STORY around AI/Quantum/Space stocks — not SEC filings — and deliver independent calls.",
       "",
       "THE LAW (the edge rule, non-negotiable): every directional call must be EARLY ('this story is forming, get ahead of it') or CONTRARIAN ('the loud story is wrong, here's why'). If a move is already consensus and priced in, you PASS — a pass is a real, honest output, never a failure. Echoing the crowd late is the 80% retail trap and is forbidden. The day you agree with consensus you are worthless.",
+      "",
+      "PUTS ARE HALF YOUR JOB. The edge is as often bearish as bullish — do NOT default to the long side. On a crowded, over-extended, euphoric name the contrarian edge is usually a PUT: the loud bullish story is wrong or exhausted. Actively look for the short side. If a name has run too far on hype, say so and structure it bearish (put). A scan that only ever produces bullish calls is itself evidence of the bullish-bias trap.",
       "",
       "Be disciplined: MOST names should be 'watch' or 'pass'. A board full of confident 'edge' calls means you have fallen into the consensus trap. One or two sharp, defensible edges is a GOOD result. Skepticism is the default. " + uni().note,
       "",
@@ -1057,12 +1083,15 @@
   // ===== VIEW TOGGLE =====
   function setView(v) {
     $('view-board').style.display = v === 'board' ? '' : 'none';
+    $('view-rotation').style.display = v === 'rotation' ? '' : 'none';
     $('view-log').style.display = v === 'log' ? '' : 'none';
     $('vt-board').classList.toggle('active', v === 'board');
+    $('vt-rotation').classList.toggle('active', v === 'rotation');
     $('vt-log').classList.toggle('active', v === 'log');
     if (v === 'log') renderLog();
   }
   $('vt-board').onclick = () => setView('board');
+  $('vt-rotation').onclick = () => setView('rotation');
   $('vt-log').onclick = () => setView('log');
 
   // ===== UNIVERSE SWITCHING =====
@@ -1085,6 +1114,115 @@
   $('u-quantum').onclick = () => switchUniverse('quantum');
   $('u-space').onclick = () => switchUniverse('space');
   $('u-ai').onclick = () => switchUniverse('ai');
+
+  // ===== CROSS-UNIVERSE ROTATION READ (the ripple layer, first form) =====
+  function buildRotationPrompt(byUni, stamp) {
+    let data = '';
+    Object.keys(byUni).forEach(u => {
+      const b = byUni[u];
+      data += '\n' + b.label.toUpperCase() + ' (avg ' + (b.avg != null ? (b.avg > 0 ? '+' : '') + b.avg.toFixed(2) + '%' : 'n/a') + ', ' + b.up + ' up / ' + b.down + ' down):\n';
+      b.names.forEach(n => { data += '  ' + n.t + ' ' + (n.chg != null ? (n.chg > 0 ? '+' : '') + n.chg.toFixed(2) + '%' : 'n/a') + '\n'; });
+    });
+    return [
+      "You are ORION, the frontier narrative scout. This is a CROSS-UNIVERSE ROTATION read across the three frontiers: AI, Quantum, Space.",
+      "",
+      "Below is the latest price action across each universe (% move). It is " + stamp + " EST. On a weekend these are last-close and stale — weight that down.",
+      "",
+      "QUESTION: is capital / attention ROTATING between these universes right now — flowing OUT of crowded AI INTO speculative Quantum/Space, the reverse, or is there no clear rotation?",
+      "",
+      "HARD HONESTY: you have ONLY price + % move — NO fund flows, NO volume, NO options data. This is a [SYNTH] inference from relative momentum, not a flow measurement. If the signal is weak or mixed, say 'no clear rotation' — never invent one to look smart. Rotation is a strong claim; demand a real divergence in momentum before making it.",
+      "",
+      "For each universe give: posture (heating|cooling|neutral|mixed) and the directional bias it implies (call|put|none) with a one-line why. Then ONE overall verdict and the honest caveat.",
+      "",
+      "Return ONLY JSON — no markdown, no fences: {\"verdict\":\"one line: the rotation call, or 'no clear rotation'\",\"universes\":[{\"u\":\"ai|quantum|space\",\"posture\":\"heating|cooling|neutral|mixed\",\"bias\":\"call|put|none\",\"why\":\"\"}],\"honest_line\":\"what you saw and did NOT have; [SYNTH], not flow data, not financial advice\"}",
+      "",
+      "DATA:", data
+    ].join('\n');
+  }
+  function parseRotation(text) {
+    let t = text.trim().replace(/^```json\s*/i, '').replace(/^```\s*/, '').replace(/```\s*$/, '').trim();
+    const obj = JSON.parse(t);
+    if (!obj.universes || !Array.isArray(obj.universes)) throw new Error('no universes array');
+    return obj;
+  }
+  function renderRotation(data, byUni) {
+    const cards = (data.universes || []).map(x => {
+      const u = (x.u || '').toLowerCase();
+      const b = byUni[u] || {};
+      const avg = b.avg != null ? (b.avg > 0 ? '+' : '') + b.avg.toFixed(2) + '%' : '';
+      const posture = (x.posture || '').toLowerCase();
+      const pc = posture === 'heating' ? 'up' : (posture === 'cooling' ? 'down' : 'flat');
+      const bias = (x.bias || 'none').toLowerCase();
+      const biasEl = bias === 'call' ? '<span class="cp call">▲ CALL bias</span>'
+        : (bias === 'put' ? '<span class="cp put">▼ PUT bias</span>' : '<span class="conf">no bias</span>');
+      return '<div class="rot-card">' +
+        '<div class="rot-card-top">' +
+          '<span class="rot-uni">' + esc(UNIVERSES[u] ? UNIVERSES[u].label : u) + '</span>' +
+          (avg ? '<span class="chg ' + pc + '">' + avg + ' avg</span>' : '') +
+          '<span class="posture ' + pc + '">' + esc(x.posture || '') + '</span>' +
+          biasEl +
+        '</div>' +
+        '<div class="rot-why">' + esc(x.why || '') + '</div>' +
+      '</div>';
+    }).join('');
+    $('rot-out').innerHTML =
+      '<div class="rot-verdict"><span class="reg-lbl">Rotation verdict</span> <span class="tag synth">synth</span>' +
+        '<div class="rot-verdict-text">' + esc(data.verdict || '') + '</div></div>' +
+      cards +
+      (data.honest_line ? '<div class="block honest"><div class="lbl">The Honest Line</div><div class="block-body">' + esc(data.honest_line) + '</div></div>' : '');
+  }
+
+  async function runRotation() {
+    const apiKey = localStorage.getItem(KEY);
+    if (!apiKey) { $('rot-status').className = 'status err'; $('rot-status').innerHTML = 'No Anthropic key set — add one in Settings (under the Board tab).'; return; }
+    const btn = $('rot-btn'); btn.disabled = true;
+    $('rot-status').className = 'status'; $('rot-out').innerHTML = '';
+    const stamp = nowEST();
+    const byUni = {};
+    const ids = Object.keys(UNIVERSES);
+    const total = ids.reduce((s, u) => s + UNIVERSES[u].names.length, 0);
+    let done = 0;
+    try {
+      for (const u of ids) {
+        byUni[u] = { label: UNIVERSES[u].label, names: [] };
+        for (const n of UNIVERSES[u].names) {
+          done++;
+          $('rot-status').innerHTML = '<span class="spinner"></span>Gathering across frontiers — ' + n.t + ' (' + done + '/' + total + ')…';
+          const q = await getQuote(n.t);
+          byUni[u].names.push({ t: n.t, chg: q.ok ? q.chg : null, price: q.ok ? q.price : null });
+        }
+      }
+      Object.keys(byUni).forEach(u => {
+        const arr = byUni[u].names.filter(x => x.chg != null);
+        byUni[u].avg = arr.length ? arr.reduce((s, x) => s + x.chg, 0) / arr.length : null;
+        byUni[u].up = arr.filter(x => x.chg > 0).length;
+        byUni[u].down = arr.filter(x => x.chg < 0).length;
+      });
+      const reached = ids.reduce((s, u) => s + byUni[u].names.filter(x => x.chg != null).length, 0);
+      if (reached === 0) { $('rot-status').className = 'status err'; $('rot-status').innerHTML = 'Couldn\'t reach price data — proxies may be rate-limited. Try again shortly.'; return; }
+
+      $('rot-status').innerHTML = '<span class="spinner"></span>ORION reading the cross-frontier picture (' + ENGINE_MODEL + ')…';
+      const res = await callEngine(buildRotationPrompt(byUni, stamp), apiKey);
+      if (!res.ok) {
+        const lowBal = /credit|balance|billing|insufficient/i.test(res.error || '');
+        $('rot-status').className = 'status err';
+        $('rot-status').innerHTML = 'Rotation read failed (' + res.status + ').' + (lowBal ? ' Looks like an Anthropic balance issue — top up the account (the May 20 lesson).' : '');
+        return;
+      }
+      let data;
+      try { data = parseRotation(res.text); }
+      catch (e) { $('rot-status').className = 'status err'; $('rot-status').innerHTML = 'ORION replied but the format was off — couldn\'t parse the rotation read.'; return; }
+      renderRotation(data, byUni);
+      const scans = getScans();
+      scans.push({ id: 'R' + Date.now(), ts: stamp + ' EST', tsEpoch: Date.now(), day: todayEST(),
+        universe: 'cross', kind: 'rotation', verdict: data.verdict || '', hadEdge: false });
+      saveScans(scans);
+      $('rot-status').innerHTML = 'Rotation read · ' + stamp + ' EST · reached ' + reached + '/' + total + ' names. [SYNTH] inference from price + narrative — not flow data.';
+    } catch (e) {
+      $('rot-status').className = 'status err'; $('rot-status').innerHTML = 'Rotation read crashed: ' + esc(e.message);
+    } finally { btn.disabled = false; }
+  }
+  $('rot-btn').onclick = runRotation;
 
   // ===== SCAN ARCHIVE — raw on every scan, judged board on every analyze =====
   // Prune rule: drop records older than 21 days ONLY if they produced no edge call.
