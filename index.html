@@ -97,6 +97,34 @@
   .set-note { font-size: 12px; color: var(--text-soft); font-style: italic; margin: 6px 0; }
   code { font-family: var(--mono); font-size: 11px; }
   .foot { text-align: center; font-size: 11px; color: var(--text-faint); margin-top: 30px; line-height: 1.6; }
+  /* ENGINE OUTPUT — edge cards / watch band / pass band */
+  .edge-card { border-left: 3px solid var(--edge); }
+  .dir { font-family: var(--mono); font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 5px; letter-spacing: 0.4px; }
+  .dir.bullish { color: var(--good); background: var(--good-bg); }
+  .dir.bearish { color: var(--bad); background: var(--bad-bg); }
+  .dir.neutral { color: var(--text-soft); background: var(--bg-soft); }
+  .conf { font-family: var(--mono); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; padding: 2px 6px; border-radius: 5px; background: var(--bg-soft); color: var(--text-soft); }
+  .badge-early { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; padding: 2px 7px; border-radius: 5px; background: var(--edge-bg); color: var(--edge); }
+  .badge-contrarian { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; padding: 2px 7px; border-radius: 5px; background: var(--meh-bg); color: var(--meh); }
+  .story-line { font-size: 13px; color: var(--text-soft); margin: 10px 0 4px; }
+  .story-line b { color: var(--text); }
+  .story-line .arc { font-style: italic; }
+  .block { margin-top: 10px; padding-top: 9px; border-top: 1px dashed var(--border-soft); }
+  .block .lbl { font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--text-faint); margin-bottom: 3px; }
+  .block.call .lbl { color: var(--edge); }
+  .block-body { font-size: 13.5px; line-height: 1.55; }
+  .block.honest .block-body { font-size: 12px; color: var(--text-soft); font-style: italic; }
+
+  .band { display: flex; gap: 10px; align-items: baseline; padding: 9px 13px; background: var(--bg-card); border: 1px solid var(--border-soft); border-radius: 8px; margin-bottom: 7px; font-size: 13px; flex-wrap: wrap; }
+  .tkr-sm { font-family: var(--mono); font-weight: 700; font-size: 13px; }
+  .band-line { color: var(--text-soft); flex: 1; }
+  .band-line b { color: var(--text); }
+  .band-tip { font-size: 12px; color: var(--meh); font-style: italic; }
+
+  details.passes { background: transparent; }
+  details.passes summary { cursor: pointer; font-size: 12px; color: var(--text-faint); padding: 6px 0; }
+  .pass-band { display: flex; gap: 10px; align-items: baseline; padding: 7px 13px; opacity: 0.62; font-size: 12.5px; border-bottom: 1px solid var(--border-soft); }
+  .pass-reason { color: var(--text-soft); }
 </style>
 </head>
 <body>
@@ -114,6 +142,7 @@
     <button class="chip" id="u-space" data-u="space" disabled>Space · soon</button>
     <span class="spacer"></span>
     <button id="scan-btn">Run scan</button>
+    <button id="analyze-btn" disabled>Analyze →</button>
   </div>
 
   <div class="status" id="status">Ready. Click <b>Run scan</b> to gather the live Quantum narrative.</div>
@@ -164,6 +193,7 @@
 (function(){
   "use strict";
   const $ = id => document.getElementById(id);
+  let lastResults = [];   // gathered narrative from the most recent scan, for the engine
 
   // ===== TIME ANCHOR (Charter principle #1) =====
   function nowEST() {
@@ -363,6 +393,7 @@
       }
 
       results.sort((a, b) => attentionScore(b) - attentionScore(a));
+      lastResults = results;
       $('watch-list').innerHTML = results.map(renderWatchCard).join('') || '<div class="empty">No data this scan — see the log above.</div>';
       $('watch-count').textContent = results.length + ' names';
 
@@ -379,6 +410,7 @@
       } else {
         $('status').innerHTML = 'Scan complete · ' + stamp + ' EST · reached ' + reached + '/' + results.length +
           ' Quantum names. Sorted by attention. Full per-name log above.';
+        refreshAnalyzeBtn(true);
       }
     } catch (e) {
       $('status').className = 'status err';
@@ -389,6 +421,209 @@
     }
   }
   $('scan-btn').onclick = runScan;
+
+  // ===== ANALYSIS ENGINE — narrative → ORION's three-part calls ([SYNTH]) =====
+  const ENGINE_MODEL = 'claude-sonnet-4-6';
+
+  function refreshAnalyzeBtn(scanned) {
+    const hasKey = !!localStorage.getItem(KEY);
+    const hasData = lastResults.length > 0;
+    const btn = $('analyze-btn');
+    btn.disabled = !(hasKey && hasData);
+    if (scanned && hasData && !hasKey) {
+      $('status').innerHTML += ' &nbsp;<b>Add an Anthropic key in Settings to get ORION\'s calls.</b>';
+    }
+  }
+
+  function buildPrompt(results) {
+    const stamp = nowEST();
+    const mkt = marketStatus();
+    let names = '';
+    results.forEach(r => {
+      const chg = r.chg == null ? 'n/a' : (r.chg > 0 ? '+' : '') + r.chg.toFixed(2) + '%';
+      names += '\n' + r.t + ' (' + r.name + ' · ' + r.grp + ') — $' +
+        (r.price != null ? r.price.toFixed(2) : '?') + ', ' + chg + ' today\n';
+      if (r.news && r.news.length) {
+        r.news.slice(0, 8).forEach(n => {
+          names += '  - ' + n.title + ' (' + (n.pub || '?') + (n.time ? ', ' + relTime(n.time) : '') + ')\n';
+        });
+      } else {
+        names += '  - (no fresh headlines surfaced)\n';
+      }
+    });
+
+    return [
+      "You are ORION, the frontier narrative scout of the NEXUS family. You read the STORY around AI/Quantum/Space stocks — not SEC filings — and deliver independent calls.",
+      "",
+      "THE LAW (the edge rule, non-negotiable): every directional call must be EARLY ('this story is forming, get ahead of it') or CONTRARIAN ('the loud story is wrong, here's why'). If a move is already consensus and priced in, you PASS — a pass is a real, honest output, never a failure. Echoing the crowd late is the 80% retail trap and is forbidden. The day you agree with consensus you are worthless.",
+      "",
+      "Be disciplined: MOST names should be 'watch' or 'pass'. A board full of confident 'edge' calls means you have fallen into the consensus trap. One or two sharp, defensible edges is a GOOD result. Skepticism is the default. Quantum names especially are narrative-driven and thin on fundamentals — handle with the most skepticism.",
+      "",
+      "It is " + stamp + " EST · " + mkt + ". On a weekend the prices are last close and may be stale — factor that into confidence. You ran on FREE PUBLIC NARRATIVE only (price, % move, headlines below). You did NOT have live institutional options flow.",
+      "",
+      "Classify each name into exactly one tier:",
+      "- 'edge': you have a real directional call that is early or contrarian. Commit.",
+      "- 'watch': a story is forming but not yet sharp enough to call — name what would tip it into an edge.",
+      "- 'pass': priced-in / consensus / no readable edge — give the one-line reason.",
+      "",
+      "Return ONLY valid JSON — no markdown, no code fences, no preamble — exactly this shape:",
+      '{"calls":[{"ticker":"","tier":"edge|watch|pass","direction":"bullish|bearish|neutral","confidence":"low|medium|high","edge_type":"early|contrarian|none","story":"one line: the dominant narrative now","arc":"forming|building|crowded|priced-in","call":"the reasoning — for edge: direction + why early/contrarian; for watch: what is forming + what would sharpen it; for pass: why there is no edge","probe":"the single specific thing to check that confirms or kills this (an analyst note, a data point, or which Unusual Whales screen + ticker + field). null if pass.","honest_line":"what you read and what you did NOT have; this is analysis and a hypothesis, NOT financial advice."}]}',
+      "",
+      "TRENDING QUANTUM NAMES:",
+      names
+    ].join('\n');
+  }
+
+  async function callEngine(prompt, apiKey) {
+    const r = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: ENGINE_MODEL,
+        max_tokens: 4000,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+    if (!r.ok) {
+      let detail = '';
+      try { detail = JSON.stringify(await r.json()); } catch(e) { detail = await r.text(); }
+      return { ok: false, status: r.status, error: detail.substring(0, 300) };
+    }
+    const data = await r.json();
+    const text = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n');
+    return { ok: true, text };
+  }
+
+  function parseCalls(text) {
+    let t = text.trim().replace(/^```json\s*/i, '').replace(/^```\s*/, '').replace(/```\s*$/, '').trim();
+    const obj = JSON.parse(t);
+    if (!obj.calls || !Array.isArray(obj.calls)) throw new Error('no calls array in response');
+    return obj.calls;
+  }
+
+  function dataFor(ticker) { return lastResults.find(r => r.t === ticker) || {}; }
+
+  function priceBits(d) {
+    const chgClass = d.chg == null ? 'flat' : (d.chg > 0.1 ? 'up' : (d.chg < -0.1 ? 'down' : 'flat'));
+    const chgTxt = d.chg == null ? '—' : (d.chg > 0 ? '+' : '') + d.chg.toFixed(2) + '%';
+    const priceTxt = d.price != null ? '$' + d.price.toFixed(2) : '';
+    return (priceTxt ? '<span class="price">' + priceTxt + '</span>' : '') +
+           '<span class="chg ' + chgClass + '">' + chgTxt + '</span>';
+  }
+
+  function renderEdgeCard(c) {
+    const d = dataFor(c.ticker);
+    const dir = (c.direction || 'neutral').toLowerCase();
+    const arrow = dir === 'bullish' ? '▲' : (dir === 'bearish' ? '▼' : '◆');
+    const badge = c.edge_type === 'contrarian'
+      ? '<span class="badge-contrarian">contrarian</span>'
+      : '<span class="badge-early">early</span>';
+    return '<div class="card edge-card">' +
+      '<div class="card-top">' +
+        '<span class="tkr">' + esc(c.ticker) + '</span>' +
+        '<span class="co">' + esc(d.name || '') + (d.grp ? ' · ' + esc(d.grp) : '') + '</span>' +
+        priceBits(d) +
+        '<span class="dir ' + dir + '">' + arrow + ' ' + esc(dir) + '</span>' +
+        '<span class="conf">' + esc(c.confidence || '') + ' conf</span>' +
+        badge +
+        '<span class="tag synth">synth</span>' +
+      '</div>' +
+      '<div class="story-line"><b>' + esc(c.story || '') + '</b> &middot; <span class="arc">' + esc(c.arc || '') + '</span></div>' +
+      '<div class="block call"><div class="lbl">The Call</div><div class="block-body">' + esc(c.call || '') + '</div></div>' +
+      (c.probe ? '<div class="block"><div class="lbl">The Probe</div><div class="block-body">' + esc(c.probe) + '</div></div>' : '') +
+      '<div class="block honest"><div class="lbl">The Honest Line</div><div class="block-body">' + esc(c.honest_line || '') + '</div></div>' +
+    '</div>';
+  }
+
+  function renderWatchBand(c) {
+    const d = dataFor(c.ticker);
+    const tip = c.probe ? '<span class="band-tip">→ sharpens if: ' + esc(c.probe) + '</span>' : '';
+    return '<div class="band">' +
+      '<span class="tkr-sm">' + esc(c.ticker) + '</span>' + priceBits(d) +
+      '<span class="band-line"><b>' + esc(c.story || '') + '</b> — ' + esc(c.call || '') + '</span>' +
+      tip +
+    '</div>';
+  }
+
+  function renderPassBand(c) {
+    return '<div class="pass-band">' +
+      '<span class="tkr-sm">' + esc(c.ticker) + '</span>' +
+      '<span class="pass-reason">' + esc(c.call || c.story || 'no edge') + '</span>' +
+    '</div>';
+  }
+
+  async function analyze() {
+    const apiKey = localStorage.getItem(KEY);
+    if (!apiKey) { $('status').className = 'status err'; $('status').innerHTML = 'No Anthropic key set — add one in Settings to run the engine.'; return; }
+    if (!lastResults.length) { $('status').className = 'status err'; $('status').innerHTML = 'Run a scan first — the engine needs gathered narrative.'; return; }
+
+    const btn = $('analyze-btn');
+    btn.disabled = true; $('scan-btn').disabled = true;
+    $('status').className = 'status';
+    $('status').innerHTML = '<span class="spinner"></span>ORION is reading the narrative and forming calls (' + ENGINE_MODEL + ')…';
+    logLine('— analysis: ' + nowEST() + ' EST · model ' + ENGINE_MODEL + ' —');
+
+    try {
+      const res = await callEngine(buildPrompt(lastResults), apiKey);
+      if (!res.ok) {
+        const lowBal = /credit|balance|billing|insufficient/i.test(res.error || '');
+        $('status').className = 'status err';
+        $('status').innerHTML = 'Engine call failed (' + res.status + ').' +
+          (lowBal ? ' Looks like an Anthropic balance/credit issue — top up the account (the May 20 lesson). ' : ' ') +
+          'See log.';
+        logLine('✗ engine HTTP ' + res.status + ' — ' + res.error, 'err');
+        return;
+      }
+
+      let calls;
+      try { calls = parseCalls(res.text); }
+      catch (e) {
+        $('status').className = 'status err';
+        $('status').innerHTML = 'ORION replied but the format was off — couldn\'t parse the calls. See log.';
+        logLine('✗ parse failed: ' + e.message, 'err');
+        logLine('raw reply: ' + res.text.substring(0, 400), 'err');
+        return;
+      }
+
+      const edges = calls.filter(c => c.tier === 'edge');
+      const watch = calls.filter(c => c.tier === 'watch');
+      const pass = calls.filter(c => c.tier === 'pass');
+
+      $('edge-list').innerHTML = edges.length
+        ? edges.map(renderEdgeCard).join('')
+        : '<div class="empty">No edge calls this scan — nothing was early or contrarian enough to commit to. That is a disciplined, honest result, not an empty one.</div>';
+      $('edge-count').textContent = edges.length;
+
+      $('watch-list').innerHTML = watch.length
+        ? watch.map(renderWatchBand).join('')
+        : '<div class="empty">Nothing forming on the watch line this scan.</div>';
+      $('watch-count').textContent = watch.length;
+
+      $('pass-list').innerHTML = pass.length
+        ? '<details class="passes" open><summary>' + pass.length + ' passed — priced-in / consensus / no edge (tap to fold)</summary>' +
+          pass.map(renderPassBand).join('') + '</details>'
+        : '<div class="empty">No passes — unusual; scrutinize the edges hard.</div>';
+      $('pass-count').textContent = pass.length;
+
+      logLine('✓ calls: ' + edges.length + ' edge · ' + watch.length + ' watch · ' + pass.length + ' pass', 'ok');
+      $('status').innerHTML = 'ORION\'s read · ' + nowEST() + ' EST · ' +
+        edges.length + ' edge call' + (edges.length === 1 ? '' : 's') + ', ' +
+        watch.length + ' watching, ' + pass.length + ' passed. Every call is [SYNTH] — analysis, not advice.';
+    } catch (e) {
+      $('status').className = 'status err';
+      $('status').innerHTML = 'Engine crashed: ' + esc(e.message) + ' — see log.';
+      logLine('!! engine crash: ' + e.message, 'err');
+    } finally {
+      btn.disabled = false; $('scan-btn').disabled = false;
+      refreshAnalyzeBtn(false);
+    }
+  }
+  $('analyze-btn').onclick = analyze;
 
   // ===== CONNECTION TEST =====
   async function testConnection() {
@@ -414,15 +649,16 @@
   $('save-key').onclick = () => {
     const k = $('key-input').value.trim();
     if (!k.startsWith('sk-ant-')) { $('key-status').innerHTML = '<span style="color:var(--bad)">Key should start with sk-ant-.</span>'; return; }
-    localStorage.setItem(KEY, k); $('key-input').value = ''; updateKeyStatus();
+    localStorage.setItem(KEY, k); $('key-input').value = ''; updateKeyStatus(); refreshAnalyzeBtn(false);
   };
   $('clear-key').onclick = () => {
     if (!confirm('Remove the Anthropic key from this browser?')) return;
-    localStorage.removeItem(KEY); updateKeyStatus();
+    localStorage.removeItem(KEY); updateKeyStatus(); refreshAnalyzeBtn(false);
   };
 
   // ===== INIT =====
   updateKeyStatus();
+  refreshAnalyzeBtn(false);
   testConnection();
 })();
 </script>
